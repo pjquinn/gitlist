@@ -37,6 +37,8 @@ class Application extends SilexApplication
         $this['filetypes'] = $config->getSection('filetypes');
         $this['binary_filetypes'] = $config->getSection('binary_filetypes');
         $this['cache.archives'] = $this->getCachePath() . 'archives';
+        $this['avatar.url'] = $config->get('avatar', 'url');
+        $this['avatar.query'] = $config->get('avatar', 'query');
 
         // Register services
         $this->register(new TwigServiceProvider(), array(
@@ -46,6 +48,9 @@ class Application extends SilexApplication
         ));
 
         $repositories = $config->get('git', 'repositories');
+        $this['git.projects'] = $config->get('git', 'project_list') ?
+                                $this->parseProjectList($config->get('git', 'project_list')) :
+                                false;
 
         $this->register(new GitServiceProvider(), array(
             'git.client'         => $config->get('git', 'client'),
@@ -67,6 +72,7 @@ class Application extends SilexApplication
             $twig->addFilter(new \Twig_SimpleFilter('md5', 'md5'));
             $twig->addFilter(new \Twig_SimpleFilter('format_date', array($app, 'formatDate')));
             $twig->addFilter(new \Twig_SimpleFilter('format_size', array($app, 'formatSize')));
+            $twig->addFunction(new \Twig_SimpleFunction('avatar', array($app, 'getAvatar')));
 
             return $twig;
         }));
@@ -107,6 +113,18 @@ class Application extends SilexApplication
         return round($size, 2) . $units[$i];
     }
 
+    public function getAvatar($email, $size)
+    {
+        $url = $this['avatar.url'] ? $this['avatar.url'] : "//gravatar.com/avatar/";
+        $query = array("s=$size");
+        if (is_string($this['avatar.query']))
+            $query[] = $this['avatar.query'];
+        else if (is_array($this['avatar.query']))
+            $query = array_merge($query, $this['avatar.query']);
+        $id = md5(strtolower($email));
+        return $url . $id . "?" . implode('&', $query);
+    }
+
     public function getPath()
     {
         return $this->path . DIRECTORY_SEPARATOR;
@@ -137,5 +155,15 @@ class Application extends SilexApplication
             . DIRECTORY_SEPARATOR
             . 'twig'
             . DIRECTORY_SEPARATOR;
+    }
+
+    public function parseProjectList($project_list)
+    {
+        $projects = array();
+        $file = fopen($project_list, "r");
+        while ($file && !feof($file))
+            $projects[] = trim(fgets($file));
+        fclose($file);
+        return $projects;
     }
 }

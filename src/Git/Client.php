@@ -8,12 +8,14 @@ class Client extends BaseClient
 {
     protected $defaultBranch;
     protected $hidden;
+    protected $projects;
 
     public function __construct($options = null)
     {
         parent::__construct($options['path']);
         $this->setDefaultBranch($options['default_branch']);
         $this->setHidden($options['hidden']);
+        $this->setProjects($options['projects']);
     }
 
     public function getRepositoryFromName($paths, $repo)
@@ -42,7 +44,10 @@ class Client extends BaseClient
                 throw new \RuntimeException('There are no GIT repositories in ' . $path);
             }
 
-            $allRepositories = array_merge($allRepositories, $repositories);
+            /**
+             * Use "+" to preserve keys, only a problem with numeric repos
+             */
+            $allRepositories = $allRepositories + $repositories;
         }
 
         $allRepositories = array_unique($allRepositories, SORT_REGULAR);
@@ -99,6 +104,10 @@ class Client extends BaseClient
                         $repoName = $file->getFilename();
                     }
 
+                    if (is_array($this->getProjects()) && !in_array($repoName, $this->getProjects())) {
+                        continue;
+                    }
+
                     $repositories[$repoName] = array(
                         'name' => $repoName,
                         'path' => $file->getPathname(),
@@ -119,6 +128,7 @@ class Client extends BaseClient
      * Set default branch as a string.
      *
      * @param string $branch Name of branch to use when repo's HEAD is detached.
+     * @return object
      */
     protected function setDefaultBranch($branch)
     {
@@ -149,10 +159,33 @@ class Client extends BaseClient
      * Set the hidden repository list
      *
      * @param array $hidden List of repositories to hide
+     * @return object
      */
     protected function setHidden($hidden)
     {
         $this->hidden = $hidden;
+
+        return $this;
+    }
+
+    /**
+     * Get project list
+     *
+     * @return array List of repositories to show
+     */
+    protected function getProjects()
+    {
+        return $this->projects;
+    }
+
+    /**
+     * Set the shown repository list
+     *
+     * @param array $projects List of repositories to show
+     */
+    protected function setProjects($projects)
+    {
+        $this->projects = $projects;
 
         return $this;
     }

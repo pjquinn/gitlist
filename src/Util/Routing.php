@@ -20,6 +20,10 @@ class Routing
      *
      * A helper for parsing routes that use commit-ish names and paths
      * separated by /, since route regexes are not enough to get that right.
+     *
+     * @param string $commitishPath
+     * @param string $repo
+     * @return array
      */
     public function parseCommitishPathParam($commitishPath, $repo)
     {
@@ -106,35 +110,23 @@ class Routing
     public function getRepositoryRegex()
     {
         static $regex = null;
-
         if ($regex === null) {
-            $isWindows = $this->isWindows();
             $quotedPaths = array_map(
-                function ($repo) use ($isWindows) {
-                    $repoName = preg_quote($repo['name']);
-
-                    if ($isWindows) {
-                        $repoName = str_replace('\\', '\\\\', $repoName);
-                    }
-
-                    return $repoName;
+                function ($repo) {
+                    return preg_quote($repo['name'], '#');
                 },
                 $this->app['git']->getRepositories($this->app['git.repos'])
             );
-
             usort(
                 $quotedPaths,
                 function ($a, $b) {
                     return strlen($b) - strlen($a);
                 }
             );
-
             $regex = implode('|', $quotedPaths);
         }
-
         return $regex;
     }
-
 
     public function isWindows()
     {
